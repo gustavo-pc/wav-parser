@@ -1,5 +1,10 @@
 # depslib dependency file v1.0
-1459921378 source:c:\users\gustavo\documents\codeblocks projects\my_wav_parser\my_wav_parser.c
+1459924861 source:c:\users\gustavo\documents\codeblocks projects\my_wav_parser\my_wav_parser.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+
+1459929594 source:c:\users\gustavo\documents\codeblocks projects\my_wav_parser\main.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>

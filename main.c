@@ -4,6 +4,7 @@
     Data: Abril de 2016
 */
 
+typedef unsigned char byte;
 /** Struct representing the header of a WAV file */
 typedef struct wave_header {
     char groupID[4];                            /// "RIFF"
@@ -26,7 +27,7 @@ typedef struct format_chunk {
 /** Struct for containing the raw audio samples and some metadata */
 typedef struct data_chunk {
     char groupID[4];                            /// 'data'
-    unsigned chunkSize;                         ///
+    unsigned int chunkSize;                         ///
     void *sampleData;                           /// byte/char for 8-bit, short for 16-bit, float for 32-bit
 } DataChunk;
 
@@ -43,7 +44,7 @@ DataChunk data = {0};
 void fillHeader();
 void fillFormat();
 char* lil_e_to_big_e_2(const char *input);
-char* lil_e_to_big_e_4(const char *input);
+char* lil_e_to_big_e_4(byte *input);
 char* fixBuffer(char buffer[4]);
 
 int main(int argc, char** argv) {
@@ -139,7 +140,7 @@ void fillFormat(){
 
 void fillData(){
     int i, j;
-    char buffer[4];
+    byte buffer[4];
 
     fseek(fileptr, 36, SEEK_SET);
     fread(data.groupID, sizeof(data.groupID), 1, fileptr);
@@ -149,7 +150,14 @@ void fillData(){
     //data.chunkSize = lil_e_to_big_e_4(buffer);
 
     printf("\nGroup ID from Data: %s\n", data.groupID);
-    printf("Buffer size: %02X %02X %02X %02X\n", buffer[0] & 0x000000FF, buffer[1] & 0x000000FF, buffer[2], buffer[3]);
+    //printf("Buffer size: %02X %02X %02X %02X\n", buffer[0] & 0x000000FF, buffer[1] & 0x000000FF, buffer[2], buffer[3]);
+
+//    if(buffer2[0] == 0x98){
+//        printf("\n\nEH 98!!!!!\n\n");
+//    } else {
+//        printf("\n\nNAO EH 98\n\n");
+//    }
+    printf("Buffer size: %02X %02X %02X %02X\n", buffer[0], buffer[1], buffer[2], buffer[3]);
     data.chunkSize = lil_e_to_big_e_4(buffer);
 
     getSamplesVector(50);
@@ -172,21 +180,16 @@ void getSamplesVector(int desiredSampleRate){
 //    }
 }
 
-char* fixBuffer(char buffer[4]){
-    char* bufferFixed = buffer;
-    int i = 0;
-    for(i=0; i<4; i++){
-        bufferFixed[i] = (buffer[i] & 0x000000FF);
-    }
-    return bufferFixed;
-}
-
 /// Returns the byte-inverted version of the input (4 bytes version)
-char* lil_e_to_big_e_4(const char *littleEndian){
+char* lil_e_to_big_e_4(byte *littleEndian){
     return littleEndian[0] | (littleEndian[1]<<8) | (littleEndian[2]<<16) | (littleEndian[3]<<24);
 }
 
 /// Returns the byte-inverted version of the input (2 bytes version)
 char* lil_e_to_big_e_2(const char *littleEndian){
     return littleEndian[0] | (littleEndian[1] << 8);
+}
+
+unsigned int fromStringToInt(){
+
 }

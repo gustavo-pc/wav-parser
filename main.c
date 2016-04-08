@@ -34,13 +34,17 @@ typedef struct data_chunk {
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define PPS 50
+#define LINEHEIGHT 255
 
+FILE *pgm = NULL;
 FILE *fileptr = NULL;
 WaveHeader header = {0};
 FormatChunk format = {0};
 DataChunk data = {0};
 
 //Function Prototypes
+void plotRow(short int value);
 void fillHeader();
 void fillFormat();
 char* lil_e_to_big_e_2(const char *input);
@@ -65,7 +69,11 @@ int main(int argc, char** argv) {
         fillHeader();
         fillFormat();
         fillData();
+        createPGM();
+        //getSamplesVector(PPS);
+        //plotRow(128);
 
+        fclose(pgm);
         fclose(fileptr);
     }
 
@@ -152,32 +160,58 @@ void fillData(){
     printf("\nGroup ID from Data: %s\n", data.groupID);
     //printf("Buffer size: %02X %02X %02X %02X\n", buffer[0] & 0x000000FF, buffer[1] & 0x000000FF, buffer[2], buffer[3]);
 
-//    if(buffer2[0] == 0x98){
-//        printf("\n\nEH 98!!!!!\n\n");
-//    } else {
-//        printf("\n\nNAO EH 98\n\n");
-//    }
     printf("Buffer size: %02X %02X %02X %02X\n", buffer[0], buffer[1], buffer[2], buffer[3]);
     data.chunkSize = lil_e_to_big_e_4(buffer);
-
-    getSamplesVector(50);
-
-    //printf("Chunk size Data: %d\n", data.chunkSize);
-
 }
 
-void getSamplesVector(int desiredSampleRate){
-    int i=0, step = format.sampleRate/desiredSampleRate;
+/// Captura os pontos da onda WAV para ser plotado no PGM.
+void getSamplesVector(int pixelsPerSec){
+    int i=0, step = format.sampleRate/pixelsPerSec;
     printf("\nStep: %d\nChunk Size: %d\n", step, data.chunkSize);
     char sampleByte;
-//    while (i < data.chunkSize/step){
-//        fread(&sampleByte, sizeof(sampleByte), 1, fileptr);
-//        printf("%4d\t ", (int)sampleByte);
-//        fseek(fileptr, step, SEEK_CUR);
-//
-//        i++;
-//        if(i % 5 == 0) printf("\n");
-//    }
+
+    while (i < data.chunkSize/step){
+        fread(&sampleByte, sizeof(sampleByte), 1, fileptr);
+        printf("%4d\t ", (int)sampleByte);
+        fseek(fileptr, step, SEEK_CUR);
+
+        plotRow(sampleByte);
+        i++;
+        if(i % 5 == 0) printf("\n");
+   }
+   printf("\n\nI = %d\n\n", i);
+}
+
+///Cria o arquivo PGM.
+void createPGM(){
+    pgm = fopen("waveform.pgm", "w+");
+    //data.chunkSize/(format.sampleRate/PPS);
+    fprintf(pgm, "P2 128 4 255");
+}
+
+///Função para plotar a forma da onda no PGM
+void plotRow(short int value){
+    if (value < 0) value *= -1;
+    short int i=0;
+    byte padding = LINEHEIGHT - ((value *2) - 1);
+
+    printf("\nVALUE: %d\n\nPADDING: %d\n", value, padding);
+
+    ///Plota espaços brancos
+    for(i=0; i <= padding; i++){
+        fprintf(pgm, " 255");
+    }
+    printf("\nFIRST FOR\n");
+    ///Plota espaços pretos
+    for(i=0; i <= (value*2)+1; i++) {
+        fprintf(pgm, " 0");
+    }
+    printf("\nSECOND FOR\n");
+    ///Plota espaços brancos
+    for(i=0; i <= padding; i++){
+        fprintf(pgm, " 255");
+    }
+    printf("\nTHIRD FOR\n");
 }
 
 /// Returns the byte-inverted version of the input (4 bytes version)
@@ -188,8 +222,4 @@ char* lil_e_to_big_e_4(byte *littleEndian){
 /// Returns the byte-inverted version of the input (2 bytes version)
 char* lil_e_to_big_e_2(const char *littleEndian){
     return littleEndian[0] | (littleEndian[1] << 8);
-}
-
-unsigned int fromStringToInt(){
-
 }

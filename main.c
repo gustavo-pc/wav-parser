@@ -70,11 +70,11 @@ int main(int argc, char** argv) {
         fillFormat();
         fillData();
         createPGM();
-        //getSamplesVector(PPS);
-        plotRow(128);
-        plotRow(128);
-        plotRow(0);
-        plotRow(1);
+        getSamplesVector(PPS);
+//        plotRow(128);
+//        plotRow(128);
+//        plotRow(0);
+//        plotRow(1);
 
         fclose(pgm);
         fclose(fileptr);
@@ -189,7 +189,9 @@ void getSamplesVector(int pixelsPerSec){
 void createPGM(){
     pgm = fopen("waveform.pgm", "w+");
     //data.chunkSize/(format.sampleRate/PPS);
-    fprintf(pgm, "P2 %d 4 255", LINEHEIGHT);
+    fprintf(pgm, "P2 %d %d 255", LINEHEIGHT, data.chunkSize/(format.sampleRate/PPS));
+    //fprintf(pgm, " UHUL");
+    //fprintf(pgm, " ehe 2323");
 }
 
 ///Função para plotar a forma da onda no PGM
@@ -202,17 +204,23 @@ void plotRow(short int value){
     printf("\nVALUE: %d\nPADDING: %d\n\n", value, padding);
 
     ///Plota espaços brancos
-    for(i=0; i <= padding; i++) {
+    for(i=0; i < padding; i++) {
         fprintf(pgm, " 255");
     }
+    printf("\nPloted %d whitespaces", i);
+
     ///Plota espaços pretos
-    for(i=0; i <= (value*2)+1; i++) {
-        fprintf(pgm, " 0");
+    for(i=0; i < (value*2)+1; i++) {
+        fprintf(pgm, " 110");
     }
+    printf("\nPloted %d blank", i);
+
     ///Plota espaços brancos
-    for(i=0; i <= padding; i++) {
+    for(i=0; i < padding; i++) {
         fprintf(pgm, " 255");
     }
+    fprintf(pgm, " ");
+    printf("\nPloted %d whitespaces\n\n", i);
 }
 
 /// Returns the byte-inverted version of the input (4 bytes version)

@@ -35,7 +35,7 @@ typedef struct data_chunk {
 #include <stdlib.h>
 #include <string.h>
 #define PPS 50
-#define LINEHEIGHT 255
+#define LINEHEIGHT 257
 
 FILE *pgm = NULL;
 FILE *fileptr = NULL;
@@ -71,7 +71,10 @@ int main(int argc, char** argv) {
         fillData();
         createPGM();
         //getSamplesVector(PPS);
-        //plotRow(128);
+        plotRow(128);
+        plotRow(128);
+        plotRow(0);
+        plotRow(1);
 
         fclose(pgm);
         fclose(fileptr);
@@ -186,32 +189,30 @@ void getSamplesVector(int pixelsPerSec){
 void createPGM(){
     pgm = fopen("waveform.pgm", "w+");
     //data.chunkSize/(format.sampleRate/PPS);
-    fprintf(pgm, "P2 128 4 255");
+    fprintf(pgm, "P2 %d 4 255", LINEHEIGHT);
 }
 
 ///Função para plotar a forma da onda no PGM
 void plotRow(short int value){
     if (value < 0) value *= -1;
-    short int i=0;
-    byte padding = LINEHEIGHT - ((value *2) - 1);
 
-    printf("\nVALUE: %d\n\nPADDING: %d\n", value, padding);
+    short int i=0;
+    byte padding =(LINEHEIGHT - ((value *2) + 1))/2;
+
+    printf("\nVALUE: %d\nPADDING: %d\n\n", value, padding);
 
     ///Plota espaços brancos
-    for(i=0; i <= padding; i++){
+    for(i=0; i <= padding; i++) {
         fprintf(pgm, " 255");
     }
-    printf("\nFIRST FOR\n");
     ///Plota espaços pretos
     for(i=0; i <= (value*2)+1; i++) {
         fprintf(pgm, " 0");
     }
-    printf("\nSECOND FOR\n");
     ///Plota espaços brancos
-    for(i=0; i <= padding; i++){
+    for(i=0; i <= padding; i++) {
         fprintf(pgm, " 255");
     }
-    printf("\nTHIRD FOR\n");
 }
 
 /// Returns the byte-inverted version of the input (4 bytes version)

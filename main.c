@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
         return 0;
     } else {
         //C:\Users\Bruno Pessoa\Downloads\wav-parser-master
-        char *filename = "C:\\Users\\Bruno Pessoa\\Downloads\\wav-parser-master\\8k8bitpcm.wav";
+        char *filename = "C:\\Users\\Bruno Pessoa\\Downloads\\wav-parser-master\\animals.wav";
         //char *filename = "C:\\Users\\gustavo\\sample.wav";
 
         printf("Your file is %s\n", filename);
@@ -71,10 +71,6 @@ int main(int argc, char** argv) {
         fillData();
         createPGM();
         getSamplesVector(PPS);
-//        plotRow(128);
-//        plotRow(128);
-//        plotRow(0);
-//        plotRow(1);
 
         fclose(pgm);
         fclose(fileptr);
@@ -155,15 +151,8 @@ void fillData(){
 
     fseek(fileptr, 36, SEEK_SET);
     fread(data.groupID, sizeof(data.groupID), 1, fileptr);
-
     fread(buffer, sizeof(buffer), 1, fileptr);
 
-    //data.chunkSize = lil_e_to_big_e_4(buffer);
-
-    printf("\nGroup ID from Data: %s\n", data.groupID);
-    //printf("Buffer size: %02X %02X %02X %02X\n", buffer[0] & 0x000000FF, buffer[1] & 0x000000FF, buffer[2], buffer[3]);
-
-    printf("Buffer size: %02X %02X %02X %02X\n", buffer[0], buffer[1], buffer[2], buffer[3]);
     data.chunkSize = lil_e_to_big_e_4(buffer);
 }
 
@@ -175,12 +164,10 @@ void getSamplesVector(int pixelsPerSec){
 
     while (i < data.chunkSize/step){
         fread(&sampleByte, sizeof(sampleByte), 1, fileptr);
-        printf("%4d\t ", (int)sampleByte);
         fseek(fileptr, step, SEEK_CUR);
 
         plotRow(sampleByte);
         i++;
-        if(i % 5 == 0) printf("\n");
    }
    printf("\n\nI = %d\n\n", i);
 }
@@ -188,39 +175,35 @@ void getSamplesVector(int pixelsPerSec){
 ///Cria o arquivo PGM.
 void createPGM(){
     pgm = fopen("waveform.pgm", "w+");
-    //data.chunkSize/(format.sampleRate/PPS);
     fprintf(pgm, "P2 %d %d 255", LINEHEIGHT, data.chunkSize/(format.sampleRate/PPS));
-    //fprintf(pgm, " UHUL");
-    //fprintf(pgm, " ehe 2323");
 }
 
 ///Função para plotar a forma da onda no PGM
-void plotRow(short int value){
-    if (value < 0) value *= -1;
+void plotRow(short int value) {
+    value = abs(value);
 
     short int i=0;
     byte padding =(LINEHEIGHT - ((value *2) + 1))/2;
-
-    printf("\nVALUE: %d\nPADDING: %d\n\n", value, padding);
+    //printf("\nVALUE: %d\nPADDING: %d\n\n", value, padding);
 
     ///Plota espaços brancos
     for(i=0; i < padding; i++) {
         fprintf(pgm, " 255");
     }
-    printf("\nPloted %d whitespaces", i);
+    //printf("\nPloted %d whitespaces", i);
 
     ///Plota espaços pretos
     for(i=0; i < (value*2)+1; i++) {
         fprintf(pgm, " 110");
     }
-    printf("\nPloted %d blank", i);
+    //printf("\nPloted %d blank", i);
 
     ///Plota espaços brancos
     for(i=0; i < padding; i++) {
         fprintf(pgm, " 255");
     }
     fprintf(pgm, " ");
-    printf("\nPloted %d whitespaces\n\n", i);
+    //printf("\nPloted %d whitespaces\n\n", i);
 }
 
 /// Returns the byte-inverted version of the input (4 bytes version)

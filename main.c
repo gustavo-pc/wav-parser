@@ -1,209 +1,205 @@
 /**
-    Parser de Arquivos WAV
-    Autor: Gustavo Pinheiro Correia
-    Data: Abril de 2016
-*/
-
-typedef unsigned char byte;
-/** Struct representing the header of a WAV file */
-typedef struct wave_header {
-    char groupID[4];                            /// "RIFF"
-    unsigned fileLength;                        ///
-    char sRiffType[4];                          /// "WAVE"
-} WaveHeader;
-
-/** Struct for keeping the metadata of the file */
-typedef struct format_chunk {
-    char groupID[4];                            /// "fmt " - yes, with the whitespace
-    unsigned chunkSize;                         ///
-    unsigned short formatTag;                   ///
-    unsigned short numChannels;                 ///
-    unsigned sampleRate;                        ///
-    unsigned avgBytesPerSec;                    ///
-    unsigned short blockAlign;                  ///
-    unsigned bitsPerSample;                     ///
-} FormatChunk;
-
-/** Struct for containing the raw audio samples and some metadata */
-typedef struct data_chunk {
-    char groupID[4];                            /// 'data'
-    unsigned int chunkSize;                         ///
-    void *sampleData;                           /// byte/char for 8-bit, short for 16-bit, float for 32-bit
-} DataChunk;
+ Parser de Arquivos WAV
+ Autor: Gustavo Pinheiro Correia
+ Data: Abril de 2016
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#define PPS 50
-#define LINEHEIGHT 257
+#include "wavefile.h"
 
-FILE *pgm = NULL;
-FILE *fileptr = NULL;
+#define PPS 80
+#define LINE_HEIGHT 257
+
+/// Global variables
+FILE *pgmptr = NULL;
+FILE *wavptr = NULL;
 WaveHeader header = {0};
 FormatChunk format = {0};
 DataChunk data = {0};
 
-//Function Prototypes
+/// Function Prototypes
 void plotRow(short int value);
 void fillHeader();
 void fillFormat();
+void fillData();
+void createPGM();
+void getSamplesVector();
 char* lil_e_to_big_e_2(const char *input);
 char* lil_e_to_big_e_4(byte *input);
-char* fixBuffer(char buffer[4]);
+
 
 int main(int argc, char** argv) {
     //Checking given filepath
-    if (0) { //argv != 2
-        char *progname = strrchr(argv[0], '\\');
+    if (argc != 2) { //argc != 2
+        char *progname = strrchr(argv[0], '/');
         printf("Uso correto: %s \"nomedoarquivo\"\n", &progname[1]);
-
+        
         return 0;
     } else {
-        //C:\Users\Bruno Pessoa\Downloads\wav-parser-master
-        char *filename = "C:\\Users\\Bruno Pessoa\\Downloads\\wav-parser-master\\animals.wav";
-        //char *filename = "C:\\Users\\gustavo\\sample.wav";
-
-        printf("Your file is %s\n", filename);
-
-        fileptr = fopen(filename, "r");
+        char *filename = argv[1];
+//        char *filename = "C:\\Users\\Bruno Pessoa\\Downloads\\wav-parser-master\\animals.wav";
+//        char *filename = "C:\\Users\\gustavo\\sample.wav";
+//        char *filename = "/Users/gustavo/Downloads/Silent8.wav";
+//        char *filename = "/Users/gustavo/Developer/SEMB/8k8bitpcm.wav";
+//        char *filename = "/Users/gustavo/Developer/SEMB/JumpMono.wav";
+        
+//        printf("Your file is %s\n", filename);
+        
+        wavptr = fopen(filename, "r");
+        
+        if (wavptr == NULL) return 1;
+        
         fillHeader();
         fillFormat();
+        
+        if (format.numChannels > 1 || format.bitsPerSample != 8) {
+            printf("Only works with 8-bit mono files\n");
+            return 1;
+        }
+        
         fillData();
         createPGM();
-        getSamplesVector(PPS);
-
-        fclose(pgm);
-        fclose(fileptr);
+        getSamplesVector();
+        
+        fclose(pgmptr);
+        fclose(wavptr);
     }
-
+    
     return 0;
 }
-
 
 /// Fills the WaveHeader Structure
 void fillHeader(){
     char littleEndian[4];
-
-    rewind(fileptr);
-
-    fread(header.groupID, sizeof(header.groupID), 1, fileptr);
-
-    fread(littleEndian, sizeof(header.fileLength), 1, fileptr);
+    
+    rewind(wavptr);
+    
+    fread(header.groupID, sizeof(header.groupID), 1, wavptr);
+    
+    fread(littleEndian, sizeof(header.fileLength), 1, wavptr);
     header.fileLength = lil_e_to_big_e_4(littleEndian);//littleEndian[0] | (littleEndian[1]<<8) | (littleEndian[2]<<16) | (littleEndian[3]<<24);
-
-    fread(header.sRiffType, 4, 1, fileptr);
+    
+    fread(header.sRiffType, 4, 1, wavptr);
 }
 
 /// Fills the FormatChunk Structure
 void fillFormat(){
-
-    char littleEndian4[4];
-    char littleEndian2[2];
-
+    
+    byte littleEndian4[4];
+    byte littleEndian2[2];
+    
     // Going to format-chunk position on file, just for making sure
-    fseek(fileptr, 12, SEEK_SET);
-
+    fseek(wavptr, 12, SEEK_SET);
+    
     // groupId
-    fread(format.groupID, sizeof(format.groupID), 1, fileptr);
-
+    fread(format.groupID, sizeof(format.groupID), 1, wavptr);
+    
     // chunkSize
-    fread(littleEndian4, sizeof(format.chunkSize), 1, fileptr);     // Getting data in Little Endian
+    fread(littleEndian4, sizeof(format.chunkSize), 1, wavptr);     // Getting data in Little Endian
     format.chunkSize = lil_e_to_big_e_4(littleEndian4);
-
+    
     // formatTag: '1' for LPCM
-    fread(littleEndian2, sizeof(format.formatTag), 1, fileptr);     // Getting data in Little Endian
+    fread(littleEndian2, sizeof(format.formatTag), 1, wavptr);     // Getting data in Little Endian
     format.formatTag = lil_e_to_big_e_2(littleEndian2);
-
+    
     // numChannels
-    fread(littleEndian2, sizeof(format.numChannels), 1, fileptr);     // Getting data in Little Endian
+    fread(littleEndian2, sizeof(format.numChannels), 1, wavptr);     // Getting data in Little Endian
     format.numChannels = lil_e_to_big_e_2(littleEndian2);
-
-    size_t bytes_read = 0;
-
+    
     // sampleRate
-    bytes_read = fread(littleEndian4, sizeof(format.sampleRate), 1, fileptr);     // Getting data in Little Endian
-    printf("Lidos %u byte(s)\n", bytes_read);
+    fread(littleEndian4, sizeof(format.sampleRate), 1, wavptr);     // Getting data in Little Endian
     format.sampleRate = lil_e_to_big_e_4(littleEndian4);
-    printf("Sample Rate Chars: %02X %02X %02X %02X\n", littleEndian4[0], littleEndian4[1], littleEndian4[2], littleEndian4[3]);
-
+//    printf("Sample Rate Chars: %02X %02X %02X %02X\n", littleEndian4[0], littleEndian4[1], littleEndian4[2], littleEndian4[3]);
+    
     // byteRate
-    bytes_read = fread(littleEndian4, sizeof(format.avgBytesPerSec), 1, fileptr);     // Getting data in Little Endian
-    printf("Lidos %u byte(s)\n", bytes_read);
+    fread(littleEndian4, sizeof(format.avgBytesPerSec), 1, wavptr);     // Getting data in Little Endian
     format.avgBytesPerSec = lil_e_to_big_e_4(littleEndian4);
-    printf("Byte Rate Chars: %02X %02X %02X %02X\n", littleEndian4[0], littleEndian4[1], littleEndian4[2], littleEndian4[3]);
-
-     // blockAlign
-    fread(littleEndian2, sizeof(format.blockAlign), 1, fileptr);     // Getting data in Little Endian
+//    printf("Byte Rate Chars: %02X %02X %02X %02X\n", littleEndian4[0], littleEndian4[1], littleEndian4[2], littleEndian4[3]);
+    
+    // blockAlign
+    fread(littleEndian2, sizeof(format.blockAlign), 1, wavptr);     // Getting data in Little Endian
     format.blockAlign = lil_e_to_big_e_2(littleEndian2);
-
-     // bitsPerSample
-    fread(littleEndian2, sizeof(format.bitsPerSample), 1, fileptr);     // Getting data in Little Endian
+    
+    // bitsPerSample
+    fread(littleEndian2, sizeof(format.bitsPerSample), 1, wavptr);     // Getting data in Little Endian
     format.bitsPerSample = lil_e_to_big_e_2(littleEndian2);
-
-    printf("Canais: %d\n", format.numChannels);
-    printf("Sample Rate Dec: %d\n", format.sampleRate);
-    printf("Resolution Dec: %d\n", format.bitsPerSample);
+    
+    printf("Channels: %d\n", format.numChannels);
+    printf("Sample Rate: %dHz\n", format.sampleRate);
+    printf("Resolution: %d-bits\n", format.bitsPerSample);
 }
 
+/// Fills the DataChunk Structure
 void fillData(){
     int i, j;
     byte buffer[4];
-
-    fseek(fileptr, 36, SEEK_SET);
-    fread(data.groupID, sizeof(data.groupID), 1, fileptr);
-    fread(buffer, sizeof(buffer), 1, fileptr);
-
+    
+    fseek(wavptr, 36, SEEK_SET);
+    fread(data.groupID, sizeof(data.groupID), 1, wavptr);
+    fread(buffer, sizeof(buffer), 1, wavptr);
+    
     data.chunkSize = lil_e_to_big_e_4(buffer);
-}
-
-/// Captura os pontos da onda WAV para ser plotado no PGM.
-void getSamplesVector(int pixelsPerSec){
-    int i=0, step = format.sampleRate/pixelsPerSec;
-    printf("\nStep: %d\nChunk Size: %d\n", step, data.chunkSize);
-    char sampleByte;
-
-    while (i < data.chunkSize/step){
-        fread(&sampleByte, sizeof(sampleByte), 1, fileptr);
-        fseek(fileptr, step, SEEK_CUR);
-
-        plotRow(sampleByte);
-        i++;
-   }
-   printf("\n\nI = %d\n\n", i);
 }
 
 ///Cria o arquivo PGM.
 void createPGM(){
-    pgm = fopen("waveform.pgm", "w+");
-    fprintf(pgm, "P2 %d %d 255", LINEHEIGHT, data.chunkSize/(format.sampleRate/PPS));
+    pgmptr = fopen("waveform.pgm", "w+");
+    fprintf(pgmptr, "P2 %d %d 255", LINE_HEIGHT, data.chunkSize/(format.sampleRate/PPS));
 }
 
-///Função para plotar a forma da onda no PGM
+/// Captura os pontos da onda WAV para ser plotado no PGM.
+void getSamplesVector(){
+    int i = 0, step = format.avgBytesPerSec/PPS;
+//    printf("\nStep: %d\nChunk Size: %d\n\n", step, data.chunkSize);
+    byte sampleByte, biggest = 0, smallest = 255;
+    
+    printf("\nGenerating PGM file...");
+    
+    while (i < data.chunkSize/step){
+        if (format.bitsPerSample == 8) {
+            fread(&sampleByte, sizeof(char), 1, wavptr);
+            fseek(wavptr, step, SEEK_CUR);
+            
+            if(sampleByte > biggest) biggest = sampleByte;
+            if(sampleByte < smallest) smallest = sampleByte;
+            
+//            printf("Plotting %d %02X", sampleByte, sampleByte);
+            plotRow(sampleByte - 127);
+        }
+        i++;
+    }
+    printf("\nPlotted %d samples\n", i);
+    printf("Biggest: %d, Smallest: %d\n", biggest, smallest);
+}
+
+///Funcao para plotar a forma da onda no PGM
 void plotRow(short int value) {
     value = abs(value);
-
+    
     short int i=0;
-    byte padding =(LINEHEIGHT - ((value *2) + 1))/2;
-    //printf("\nVALUE: %d\nPADDING: %d\n\n", value, padding);
-
-    ///Plota espaços brancos
+    byte padding =(LINE_HEIGHT - ((value *2) + 1))/2;
+//    printf("\nVALUE: %d\nPADDING: %d\n", value, padding);
+    
+    ///Plota espacos brancos
     for(i=0; i < padding; i++) {
-        fprintf(pgm, " 255");
+        fprintf(pgmptr, " 255");
     }
-    //printf("\nPloted %d whitespaces", i);
-
-    ///Plota espaços pretos
+//    printf("Ploted %d whitespaces", i);
+    
+    ///Plota espaÃos pretos
     for(i=0; i < (value*2)+1; i++) {
-        fprintf(pgm, " 110");
+        fprintf(pgmptr, " 110");
     }
-    //printf("\nPloted %d blank", i);
-
-    ///Plota espaços brancos
+//    printf("\nPloted %d blank", i);
+    
+    ///Plota espacos brancos
     for(i=0; i < padding; i++) {
-        fprintf(pgm, " 255");
+        fprintf(pgmptr, " 255");
     }
-    fprintf(pgm, " ");
-    //printf("\nPloted %d whitespaces\n\n", i);
+    fprintf(pgmptr, " ");
+//    printf("\nPloted %d whitespaces\n\n", i);
 }
 
 /// Returns the byte-inverted version of the input (4 bytes version)

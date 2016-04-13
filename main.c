@@ -7,9 +7,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include "wavefile.h"
 
+/// Pixels per second
 #define PPS 100
 #define LINE_HEIGHT 257
 #define BLACK " 110 "
@@ -23,7 +23,7 @@ WaveHeader header = {0};
 FormatChunk format = {0};
 DataChunk data = {0};
 char *filename;
-byte chosenSamples[10000][2];
+byte *chosenSamples;
 unsigned samplesCount = 0;
 
 /* Function Prototypes */
@@ -61,7 +61,7 @@ char *removeFileExt(char* mystr);
 /** Implementations */
 
 int main(int argc, char** argv) {
-
+    
     //Checking given filepath
     short required = TESTING ? 1 : 2;
     
@@ -96,14 +96,18 @@ int main(int argc, char** argv) {
             return 403;
         }
         
-//        byte sampley[data.chunkSize/(format.sampleRate/PPS)][2];
-//        sampley[0][0] = 110;
-//        sampley[100][1] = 110;
-        
+        // Filling DataChunk
         fillData();
+        
+        // Allocating array for getting samples
+        byte sampley[data.chunkSize/(format.sampleRate/PPS)][2];
+        chosenSamples = sampley[0];
+        
+        // File stuff
         createPGM();
         chooseSamples();
         fillPGM();
+        
         fclose(pgmptr);
         fclose(wavptr);
     }
@@ -209,22 +213,22 @@ void chooseSamples(){
                 if(buffer > max) max = buffer;
                 if(buffer < min) min = buffer;
             }
-            chosenSamples[i][0] = min;
-            chosenSamples[i][1] = max;
+            chosenSamples[2*(i+1)-1] = min;
+            chosenSamples[2*(i+1)] = max;
             max = 128;
             min = 127;
         }
         i++;
     }
     samplesCount = i;
-    printf("\nPlotted %d samples\n", i);
 }
 
 void fillPGM(){
     int i;
     for (i = 0; i < samplesCount; i++) {
-        plotValue(chosenSamples[i][0], chosenSamples[i][1]);
+        plotValue(chosenSamples[2*(i+1)-1], chosenSamples[2*(i+1)]);
     }
+    printf("\nPlotted %d samples\n", i);
 }
 
 void plotValue(short int min, short int max){

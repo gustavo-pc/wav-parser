@@ -1,8 +1,8 @@
 /**
  Parser de Arquivos WAV
- Autor: Gustavo Pinheiro Correia
+ Autores: Gustavo Pinheiro e Bruno Pessoa
  Data: Abril de 2016
- */
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -181,8 +181,16 @@ void fillData(){
 }
 
 void createPGM(){
-    char *namext = strrchr(filename, '/');
-    char *namenoxt = removeFileExt(&namext[1]);
+    char *cropped = strrchr(filename, '/');
+    char *namext, *namenoxt;
+    if (cropped != NULL) {
+        namext = cropped;
+        namenoxt = removeFileExt(&namext[1]);
+    } else {
+        namext = filename;
+        namenoxt = removeFileExt(namext);
+    }
+    
     pgmptr = fopen(strcat(namenoxt, ".pgm"), "w");
     fprintf(pgmptr, "P2 %d %d 255", LINE_HEIGHT, data.chunkSize/(format.sampleRate/PPS));
 }

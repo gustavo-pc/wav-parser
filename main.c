@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include "wave.h"
 
-#pragma config FOSC  = INTOSCIO_EC
+#pragma config OSC  = HS
 #pragma config MCLRE = OFF
 
 #define LINE_HEIGHT 513

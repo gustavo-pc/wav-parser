@@ -10,7 +10,6 @@ void writeHeader();
 void readAndPrint();
 
 int main() {
-                    //C:\Users\Bruno Pessoa\Desktop\parser\parser_project
     wavptr = fopen("C:\\Users\\Bruno Pessoa\\Desktop\\parser\\parser_project\\jump8.wav", "r");
 
     if (wavptr == NULL) {
@@ -34,7 +33,7 @@ int main() {
 
 void writeHeader(){
     fprintf(headerptr, "typedef unsigned char byte;\n");
-    fprintf(headerptr, "byte chNumber = 1;\nshort sampleRate = 8000;\nbyte resolution = 8;\nbyte data[] = {");
+    fprintf(headerptr, "byte chNumber = 1;\nshort sampleRate = 8000;\nbyte resolution = 8;\nrom nbyte data[] = {");
 }
 
 void readAndPrint(){

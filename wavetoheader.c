@@ -10,8 +10,8 @@ void writeHeader();
 void readAndPrint();
 
 int main() {
-
-    wavptr = fopen("C:\\Users\\Bruno Pessoa\\Desktop\\parser\\wav-parser\\jump8.wav", "r");
+                    //C:\Users\Bruno Pessoa\Desktop\parser\parser_project
+    wavptr = fopen("C:\\Users\\Bruno Pessoa\\Desktop\\parser\\parser_project\\jump8.wav", "r");
 
     if (wavptr == NULL) {
         printf("Could not load the file\n");
@@ -53,4 +53,6 @@ void readAndPrint(){
     fseek(headerptr, -1, SEEK_CUR);
     fprintf(headerptr, "};\n");
     fprintf(headerptr, "short dataSize = %d;\n", i);
+
+    printf("\nFunfou ae!!!\n");
 }

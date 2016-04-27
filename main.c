@@ -9,13 +9,21 @@
 #include <stdio.h>
 #include "wave.h"
 
-#pragma config OSC  = HS
+#pragma config FOSC  = HS
 #pragma config MCLRE = OFF
 
 #define LINE_HEIGHT 513
 #define BLACK " 0 "
 #define WHITE " 255 "
 #define TESTING 0
+
+void jumpLineSerial(){
+    printf("\n\r");
+}
+
+void printInSerial(char* str) {
+    putrsUSART(str);
+}
 
 ///Plots a row with a top and a bottom value
 void plotValue(short value) {
@@ -45,51 +53,57 @@ void plotValue(short value) {
 
     //Plot Bottom Paddding
     for (i = 0; i < padBottom; i++) {
-        printf(WHITE);
+        printInSerial(WHITE);
     }
 
     if(flagUp == 0) {
         // Plot bottom value
         for (i = 0; i < value_mod; i++) {
-            printf(BLACK);
+            printInSerial(BLACK);
         }
         //Center point
-        printf(BLACK);
+        printInSerial(BLACK);
     } else {
-        printf(BLACK);
+        printInSerial(BLACK);
         // Plot top value
         for (i = 0; i < value_mod; i++){
-            printf(BLACK);
+            printInSerial(BLACK);
         }
     }
 
     //Plot Top Paddding
     for (i = 0; i < padTop; i++) {
-        printf(WHITE);
+        printInSerial(WHITE);
     }
 }
 
 ///Fills the PGM file with the chosen samples
 void printPGMInSerial(){
-    int i;
-    for (i = 0; i < dataSize; i++) {
-        plotValue(data[i]);
-    }
+//    int i;    
+    putrsUSART("P2");            
+    jumpLineSerial();
+    putrsUSART("2 3 255");
+    jumpLineSerial();
+    putrsUSART("255 180 130 80 50 0");
+    
+//    for (i = 0; i < dataSize; i++) {
+//        plotValue(data[i]);
+//    }
 }
 
-int main(int argc, char** argv) {
-    //printPGMInSerial();
+void openSerialComm(){
+    OpenUSART(USART_TX_INT_OFF  &
+              USART_RX_INT_OFF  & 
+              USART_ASYNCH_MODE &
+              USART_EIGHT_BIT   &
+              USART_BRGH_HIGH, 51);        
+    Delay10KTCYx(1);
+}
+
+void main() {    
+    openSerialComm();
+   
+    printPGMInSerial();
     
-    OpenUSART(  USART_TX_INT_OFF  &
-                    USART_RX_INT_OFF  & 
-                    USART_ASYNCH_MODE &
-                    USART_EIGHT_BIT   &
-                    USART_BRGH_HIGH, 51);
-        
-    Delay1KTCYx(10);
-    while(1){        
-        putrsUSART("Opa");
-        Delay1KTCYx(50);
-    }
-    return 0;
+    while(1);
 }

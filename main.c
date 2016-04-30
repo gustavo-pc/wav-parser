@@ -3,107 +3,94 @@
  Autores: Gustavo Pinheiro e Bruno Pessoa
  Data: Abril de 2016
 */
+//#include <stdio.h>
 #include <p18f4550.h>
 #include <usart.h>
 #include <delays.h>
-#include <stdio.h>
 #include "wave.h"
 
 #pragma config FOSC  = HS
 #pragma config MCLRE = OFF
 
-#define LINE_HEIGHT 513
+#define PPS 50
+#define LINE_HEIGHT 129
 #define BLACK " 0 "
 #define WHITE " 255 "
 #define TESTING 0
 
-void jumpLineSerial(){
-    printf("\n\r");
+//byte chosenSamples[2879/(8000/PPS)][2];
+unsigned samplesCount = 0;
+
+void chooseSamples(){
+    int i = 0, j = 0, step = 8000/PPS;
+    byte buffer, max = 128, min = 127;
+
+    for(i=0; i < dataSize; i++) {
+        if(i%step == 0 && i != 0){
+            //plotValue(min, max);
+            max = 128;
+            min = 127;
+            samplesCount++;
+        }
+        if(data[i] < min) //MIN
+            max = data[i];
+        if(data[i] > max) // MAX
+            min = data[i];
+    }
+    printf("\n\nInt nosso: %d\n\r", (dataSize/step) );
+    printf("\nVerdadeiro: %d\n\r", samplesCount);
 }
 
-void printInSerial(char* str) {
-    putrsUSART(str);
-}
-
-///Plots a row with a top and a bottom value
-void plotValue(short value) {
-    int range = (LINE_HEIGHT - 1)/2, i = 0, value_mod, padBottom, padTop;
+void plotValue(short int min, short int max){
+    int range = (LINE_HEIGHT - 1)/2, i = 0;
 
     /// Normalizing between 1 and 128
-    byte flagUp = 1;
-
-    if (value < 128) {
-        value = 128 - value;
-        flagUp = 0;
-    } else {
-        value -= 127;
-    }
+    int down = 128 - min, up = max - 127;
 
     /// Normalizing between 1 and range
-    value_mod = value * range/128;
+    int down_mod = (down * range)/128;
+    int up_mod = (up * range)/128;
 
     // Paddings
-    padBottom = range;
-    padTop = range;
-    
-    if (flagUp == 1)
-        padTop -= value_mod;
-    else
-        padBottom -= value_mod;
+    int padBottom = range - down_mod;
+    int padTop = range - up_mod;
 
     //Plot Bottom Paddding
     for (i = 0; i < padBottom; i++) {
-        printInSerial(WHITE);
+        printf( WHITE);
     }
 
-    if(flagUp == 0) {
-        // Plot bottom value
-        for (i = 0; i < value_mod; i++) {
-            printInSerial(BLACK);
-        }
-        //Center point
-        printInSerial(BLACK);
-    } else {
-        printInSerial(BLACK);
-        // Plot top value
-        for (i = 0; i < value_mod; i++){
-            printInSerial(BLACK);
-        }
+    // Plot bottom value
+    for (i = 0; i < down_mod; i++) {
+        printf( BLACK);
+    }
+
+    //Center point
+    printf( BLACK);
+
+    // Plot bottom value
+    for (i = 0; i < up_mod; i++){
+        printf( BLACK);
     }
 
     //Plot Top Paddding
     for (i = 0; i < padTop; i++) {
-        printInSerial(WHITE);
+        printf( WHITE);
     }
-}
-
-///Fills the PGM file with the chosen samples
-void printPGMInSerial(){
-//    int i;    
-    putrsUSART("P2");            
-    jumpLineSerial();
-    putrsUSART("2 3 255");
-    jumpLineSerial();
-    putrsUSART("255 180 130 80 50 0");
-    
-//    for (i = 0; i < dataSize; i++) {
-//        plotValue(data[i]);
-//    }
 }
 
 void openSerialComm(){
     OpenUSART(USART_TX_INT_OFF  &
-              USART_RX_INT_OFF  & 
+              USART_RX_INT_OFF  &
               USART_ASYNCH_MODE &
               USART_EIGHT_BIT   &
-              USART_BRGH_HIGH, 51);        
+              USART_BRGH_HIGH, 51);
     Delay10KTCYx(1);
 }
 
-void main() {    
+void main() {
     openSerialComm();
-   
-    printPGMInSerial();
-    
+    chooseSamples();
+
     while(1);
 }

@@ -13,8 +13,9 @@
 #pragma config FOSC  = HS
 #pragma config MCLRE = OFF
 
-#define PPS                 100
-#define LINE_HEIGHT         33             //Must be an odd value
+#define PPS                 1200
+#define LINE_HEIGHT         201 //Must be an odd value
+#define BAUD                500000
 #define BLACK               " 110 "
 #define WHITE               " 255 "
 
@@ -26,7 +27,7 @@ void openSerialComm(){
               USART_RX_INT_OFF  &
               USART_ASYNCH_MODE &
               USART_EIGHT_BIT   &
-              USART_BRGH_HIGH, 51);
+              USART_BRGH_HIGH, (1000000-(2*BAUD))/(2*BAUD));
     Delay10KTCYx(1);
 }
 

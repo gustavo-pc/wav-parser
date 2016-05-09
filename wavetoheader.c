@@ -1,5 +1,18 @@
+/**
+    Wave to Header
+    April 2016, IFCE - Bruno Pessoa and Gustavo Pinheiro
+
+    Description: An auxiliar program for generating header files for being used in the 'WAVE to PGM' application for PIC18
+                 It outputs the LPCM bytes from the WAVE file in a header file
+    Input      : An 8-bit mono WAVE file
+    Output     : A header file 'wave.h' containing an array of sampels
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
+
+/// WAVE file location
+#define WAV_LOCATION "C:\\Users\\gustavo\\Developer\\SEMB\\wav-parser\\jump8.wav"
 
 typedef unsigned char uint8_t;
 
@@ -10,35 +23,12 @@ void writeHeader();
 void readAndPrint();
 
 int main() {
-    wavptr = fopen("C:\\Users\\gustavo\\Developer\\SEMB\\wav-parser\\jump8.wav", "r");
+    wavptr = fopen(WAV_LOCATION, "r");
 
     if (wavptr == NULL) {
         printf("Could not load the file\n");
         return 404;
     }
-
-    ///Before running
-
-
-    //char groupID[5];
-    //groupID[4] = '\0';
-    //unsigned char buffer;
-    //int i = 0;
-
-    //while (!feof(wavptr)){
-    //    fread(&buffer, sizeof(buffer), 1, wavptr);
-    //    printf("%d: %c\t", i++, buffer);
-    //}
-
-    //fseek(wavptr, 96, SEEK_SET);
-    //fread(groupID, sizeof(groupID), 1, wavptr);
-    //printf(groupID);
-
-    //rewind(wavptr);
-
-    /// End Before running
-
-
     headerptr = fopen("wave.h", "w");
 
     writeHeader();
@@ -53,21 +43,28 @@ int main() {
     return 0;
 }
 
+
+/// Prints the default values on the header file
 void writeHeader(){
     fprintf(headerptr, "typedef unsigned char byte;\n");
     fprintf(headerptr, "byte chNumber = 1;\nshort sampleRate = 8000;\nbyte resolution = 8;\nrom byte data[] = {");
 }
 
+
+/// Iterates on the Wave file and prints the data in integer format on the array of samples
 void readAndPrint(){
 
     uint8_t buffer = 0;
     int i = 0;
 
+    /// Jumping to the 'data' chunk of the WAVE file
     fseek(wavptr, 96 + 8, SEEK_SET);
 
+    printf("Generating header file...\n");
+
+    /// Reading and printing all the content on the .h
     while(!(feof(wavptr))) {
         fread(&buffer, sizeof(uint8_t), 1, wavptr);
-        //if(i >= 0 && i <= 40 ) printf("data[%2d]: %c 0x%02X %3d \n", i, buffer, buffer, buffer);
         fprintf(headerptr, "%d,", buffer);
         i++;
     }
@@ -76,5 +73,5 @@ void readAndPrint(){
     fprintf(headerptr, "};\n");
     fprintf(headerptr, "short dataSize = %d;\n", i);
 
-    printf("\nFunfou ae!!!\n");
+    printf("Done!!!\n");
 }

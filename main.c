@@ -13,14 +13,21 @@
 #pragma config FOSC  = HS
 #pragma config MCLRE = OFF
 
+/**Points Per Second: Defines the quantity of intervals for each second of the song.
+In each interval, we catch the maximum and the minimum bytes.
+In other words, we use (2*PPS) number of bytes for each second.*/
 #define PPS                 100
+/**Line Height: Defines how many pixels we are going to plot for each value
+Each byte that we plot, represents one line of the PGM file
+*/
 #define LINE_HEIGHT         33             //Must be an odd value
-#define BLACK               " 110 "
-#define WHITE               " 255 "
+#define BLACK               " 110 "     ///Our black pixel color (Gray scale from 0 to 255)
+#define WHITE               " 255 "     ///Our white pixel color
 
 //byte chosenSamples[2879/(8000/PPS)][2];
 //unsigned samplesCount = 0;
 
+///Configures and opens the serial communication
 void openSerialComm(){
     OpenUSART(USART_TX_INT_OFF  &
               USART_RX_INT_OFF  &
@@ -30,6 +37,7 @@ void openSerialComm(){
     Delay10KTCYx(1);
 }
 
+///Writes in the serial the header of the PGM file.
 void writeHeader(){
     printf("P2\n\r%d %d\n\r255\n\r", LINE_HEIGHT, dataSize/(sampleRate/PPS));
 }
@@ -44,31 +52,31 @@ void plotValue(byte min, byte max){
     byte debug = 0;
 
     /// Normalizing between 1 and range
-    int down_mod = ((float) down/128) * range;
-    int up_mod = ((float) up/128) * range;
+    int down_mod = ((float) down/128) * range;//How many black pixels to be plotted below the central axis
+    int up_mod = ((float) up/128) * range;//How many black pixels to be plotted above the central axis
 
-    // Paddings
+    /// Paddings are the white pixels to be plotted int the same line
     int padBottom = range - down_mod;
     int padTop = range - up_mod;
-    
+
     if(debug){
         printf("min: %3d down:%3d down_mod:%3d    max: %3d up:%3d up_mod:%3d", min, down, down_mod, max, up, up_mod);
-    }    
+    }
 
     //Plot Bottom Paddding
     for (i = 0; i < padBottom; i++) {
         if(!debug) printf(WHITE);
     }
 
-    // Plot bottom value
+    // Plot Bottom value
     for (i = 0; i < down_mod; i++) {
         if(!debug) printf(BLACK);
     }
 
-    //Center point
+    //Center point - is always a black pixel
     if(!debug) printf(BLACK);
 
-    // Plot bottom value
+    // Plot Top value
     for (i = 0; i < up_mod; i++){
         if(!debug) printf(BLACK);
     }
@@ -81,24 +89,23 @@ void plotValue(byte min, byte max){
 }
 
 void chooseSamples(){
+    /// STEP: Defines the length (in bytes) of each interval of bytes to catch the minimum and maximum values to be plotted.
     int i = 0, step = sampleRate/PPS;
     byte buffer, max = 128, min = 127;
-    
+
+    //Iterate over all bytes from the array that contains the song data in wave.h
     for(i=0; i < dataSize; i++) {
-        if(i%step == 0 && i != 0){
+        //Whenever the (i) value reaches the length(step) of the interval, the current max and min are plotted and reseted.
+        if(i%step == 0 && i != 0) {
             plotValue(min, max);
-            //printf("Calling with: %3d, %3d\n\r", min, max);
             max = 128;
             min = 127;
-            //samplesCount++;
         }
         if(data[i] < min) //MIN
             min = data[i];
         if(data[i] > max) // MAX
             max = data[i];
     }
-    //printf("\n\nInt nosso: %d\n\r", (dataSize/step) );
-    //printf("\nVerdadeiro: %d\n\r", samplesCount);
 }
 
 void main() {

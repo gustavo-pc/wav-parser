@@ -4,6 +4,14 @@
  Data: Abril de 2016
 */
 
+/**
+    The WAV Files Parser is an application to PIC18 that, in short, reads a WAV file format and generate, as output,
+    prints of values to be used by a PGM file (the result is the approximate waveform from the WAV file drawn).
+    The WAV file reading is currently done only statically on the PIC ROM memory.
+    The output is generated through multiples prints that can only be captured by the serial in the moment. Than, gathering all
+    the values printed in the serial (through a terminal) and creating a PGM file, the waveform drawn can be seen.
+*/
+
 #include <stdio.h>                         //For printf in Proteus
 #include <p18f4550.h>
 #include <usart.h>
@@ -17,6 +25,7 @@
 In each interval, we catch the maximum and the minimum bytes.
 In other words, we use (2*PPS) number of bytes for each second.*/
 #define PPS                 1200
+
 /**Line Height: Defines how many pixels we are going to plot for each value
 Each byte that we plot, represents one line of the PGM file.*/
 #define LINE_HEIGHT         201 //Must be an odd value
@@ -34,11 +43,21 @@ void openSerialComm(){
     Delay10KTCYx(1);
 }
 
-///Writes in the serial the header of the PGM file.
+/**
+Writes in the serial the header of the PGM file.
+Currentky, the PGM has the WIDTH equals to our LINE_HEIGHT, and the HEIGHT equals to 255
+(Our WAVEFORM is drawn vertically and not horizontally as ordinary, because the write in PGM is done vertically)
+*/
 void writeHeader(){
     printf("P2\n\r%d %d\n\r255\n\r", LINE_HEIGHT, dataSize/(sampleRate/PPS));
 }
 
+
+/**
+  Takes the min and max values captured in a certain interval of bytes in the wav file, and prints the values used by the
+  PGM file using the min value to plot the black pixels below the central axis, and the max value to plot the black pixels
+  above the central axis.
+*/
 void plotValue(byte min, byte max){
     int range = (LINE_HEIGHT - 1)/2, i = 0;
 

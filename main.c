@@ -29,10 +29,10 @@
 #pragma config MCLRE = OFF
 
 /// Pixels Per Second: The number of audio samples to be captured in a second
-#define PPS                 1200
+#define PPS                 100
 
 /// The line height (in pixels) for the PGM file
-#define LINE_HEIGHT         201                         // Must be an odd value, because of the zero-line
+#define LINE_HEIGHT         33                         // Must be an odd value, because of the zero-line
 
 /// Baud Rate for USART
 #define BAUD                500000
@@ -40,6 +40,37 @@
 /// Colors to be printed on PGM
 #define BLACK               " 110 "
 #define WHITE               " 255 "
+
+/// Function prototypes
+void low_ISR();
+void prepareMeasurement();
+void openSerialComm();
+void writeHeader();
+void chooseSamples();
+
+/// Global variables
+byte running = 0;
+int  counter = 0;
+
+/// Interrupt stuff
+#pragma code low_vector = 0x08
+void low_vector_code(){ _asm goto low_ISR _endasm }
+#pragma code
+
+#pragma interrupt low_ISR
+void low_ISR(){
+    if (running) counter++;
+    INTCONbits.T0IF = 0x00;                                                     // Resetting interruption flag (so the interrupt happens again)
+    //TMR0L           = 0x00;                                                   // Starting count again (necessary?)
+}
+
+void prepareMeasurement(){
+    INTCONbits.GIE  = 0x01;                                                     // Enabling interruptions
+    INTCONbits.T0IE = 0x01;                                                     // Enabling TMR0 overflow interrupt
+    T0CON           = 0b11000111;                                               // Configuring T0CON to enable Timer0
+                                                                                // 8-bits, Internal clock, 1:256 prescaler
+    TMR0L           = 0;                                                        // Starting TMR0 on 0
+}
 
 /// Configures and opens the serial communication
 void openSerialComm(){
@@ -145,10 +176,20 @@ void chooseSamples(){
 
 /// Starts here
 void main() {
+    prepareMeasurement();
+    
+    // Started code execution
+    running = 1;
+    
     openSerialComm();
     writeHeader();
     chooseSamples();
-
+    
+    // Finished code execution
+    running = 0;
+    
+    printf("\n\rInterrupted %d times\n\r", counter);
+    
     // Preventing main() from being called again
     while(1);
 }

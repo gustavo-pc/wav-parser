@@ -29,10 +29,10 @@
 #pragma config MCLRE = OFF
 
 /// Pixels Per Second: The number of audio samples to be captured in a second
-#define PPS                 100
+#define PPS                 1200
 
 /// The line height (in pixels) for the PGM file
-#define LINE_HEIGHT         33                         // Must be an odd value, because of the zero-line
+#define LINE_HEIGHT         201                         // Must be an odd value, because of the zero-line
 
 /// Baud Rate for USART
 #define BAUD                500000
@@ -67,9 +67,8 @@ void low_ISR(){
 void prepareMeasurement(){
     INTCONbits.GIE  = 0x01;                                                     // Enabling interruptions
     INTCONbits.T0IE = 0x01;                                                     // Enabling TMR0 overflow interrupt
-    T0CON           = 0b11000111;                                               // Configuring T0CON to enable Timer0
+    T0CON           = 0b11001000;                                               // Configuring T0CON to enable Timer0
                                                                                 // 8-bits, Internal clock, 1:256 prescaler
-    TMR0L           = 0;                                                        // Starting TMR0 on 0
 }
 
 /// Configures and opens the serial communication
@@ -103,7 +102,7 @@ void plotValue(byte min, byte max){
     int down = 128 - min, up = max - 127;
 
     // 1: true, 0: false
-    byte debug = 0;
+    byte debug = 1;
 
     // Normalizing between 1 and range
     int down_mod = ((float) down/128) * range; ///How many black pixels to be plotted below the central axis
@@ -114,7 +113,7 @@ void plotValue(byte min, byte max){
     int padTop = range - up_mod;
 
     if(debug){
-        printf("min: %3d down:%3d down_mod:%3d    max: %3d up:%3d up_mod:%3d", min, down, down_mod, max, up, up_mod);
+        //  printf("min: %3d down:%3d down_mod:%3d    max: %3d up:%3d up_mod:%3d", min, down, down_mod, max, up, up_mod);
     }
 
     // Plot Bottom Paddding
@@ -139,7 +138,7 @@ void plotValue(byte min, byte max){
     for (i = 0; i < padTop; i++) {
         if(!debug) printf(WHITE);
     }
-    printf("\n\r");
+    if(!debug) printf("\n\r");
 }
 
 
@@ -176,19 +175,20 @@ void chooseSamples(){
 
 /// Starts here
 void main() {
+    openSerialComm();
     prepareMeasurement();
     
     // Started code execution
+    printf("Started Measurement: Height = %d and PPS = %d\n\r", LINE_HEIGHT, PPS);
     running = 1;
-    
-    openSerialComm();
-    writeHeader();
+    TMR0L   = 0;                                                        // Starting TMR0 on 0
+
+    //writeHeader();
     chooseSamples();
     
     // Finished code execution
-    running = 0;
-    
-    printf("\n\rInterrupted %d times\n\r", counter);
+    running = 0;   
+    printf("Interrupted %d times in %lu us\n\r", counter, (unsigned long int)counter*(128));
     
     // Preventing main() from being called again
     while(1);

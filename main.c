@@ -15,8 +15,8 @@
 #define LINE_HEIGHT     257
 #define BLACK           " 110 "
 #define WHITE           " 255 "
-#define TESTING         0
-#define MEASURING       1
+#define TESTING         1
+#define MEASURING       0
 #define DEFAULT_FILE    "/Users/gustavo/Developer/SEMB/8k8bitpcm.wav"
 
 /// Global variables
@@ -67,10 +67,15 @@ char* lil_e_to_big_e_4(byte *input);
 /// Removes the file extension
 char *removeFileExt(char* mystr);
 
+/// Prints memory usage information
+void printMemoryInfo();
+
 /** Implementations */
 
 int main(int argc, char** argv) {
-
+    
+    printMemoryInfo();
+    
     //Checking given filepath
     short required = TESTING ? 1 : 2;
     
@@ -117,6 +122,8 @@ int main(int argc, char** argv) {
         
         fclose(pgmptr);
         fclose(wavptr);
+        
+        printMemoryInfo();
     }
     
     return 0;
@@ -213,7 +220,7 @@ void createPGM(){
         namenoxt = removeFileExt(namext);
     }
     
-    if(!MEASURING) pgmptr = fopen(strcat(namenoxt, ".pgm"), "w");
+    pgmptr = fopen(strcat(namenoxt, ".pgm"), "w");
     if(!MEASURING) fprintf(pgmptr, "P2 %d %d 255", LINE_HEIGHT, data.chunkSize/(format.sampleRate/PPS));
 }
 
@@ -307,3 +314,60 @@ char *removeFileExt(char* mystr) {
         *lastdot = '\0';
     return retstr;
 }
+
+void printMemoryInfo(){
+    int pageSize = getPageSize();
+    
+    FILE *fptr;
+    if((fptr = fopen("/proc/self/statm", "r")) == NULL){
+        printf("Failed to open the proc file\n");
+        exit(1);
+    }
+    
+    char ret[50];
+    fscanf(fptr, "%[^=]=%[^;];", ret);
+    fclose(fptr);
+    printf("\n[size][RSS][share][text][data][dp]\n%s", ret);
+    printf("pages size: %d", pageSize);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

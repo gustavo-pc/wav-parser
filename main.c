@@ -7,14 +7,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "wavefile.h"
 
-#define PPS 100
-#define LINE_HEIGHT 257
-#define BLACK " 110 "
-#define WHITE " 255 "
-#define TESTING 0
+#define PPS             100
+#define LINE_HEIGHT     257
+#define BLACK           " 110 "
+#define WHITE           " 255 "
+#define TESTING         0
+#define MEASURING       1
+#define DEFAULT_FILE    "/Users/gustavo/Developer/SEMB/8k8bitpcm.wav"
 
 /// Global variables
 FILE *pgmptr = NULL;
@@ -23,8 +26,11 @@ WaveHeader header = {0};
 FormatChunk format = {0};
 DataChunk data = {0};
 char *filename;
+byte allSamples[150000];
+int allSamplesCount = 0;
 byte chosenSamples[10000][2];
 unsigned samplesCount = 0;
+clock_t timePassed;
 
 /* Function Prototypes */
 
@@ -36,6 +42,9 @@ void fillFormat();
 
 /// Fills the DataChunk Structure
 void fillData();
+
+/// Puts all samples
+void fillSamples();
 
 ///Creates the PGM file
 void createPGM();
@@ -72,11 +81,7 @@ int main(int argc, char** argv) {
         return 400;
     } else {
         filename = argv[1];
-//        filename = "C:\\Users\\Bruno Pessoa\\Downloads\\wav-parser-master\\animals.wav";
-//        filename = "C:\\Users\\gustavo\\sample.wav";
-//        filename = "/Users/gustavo/Downloads/Silent8.wav";
-        filename = TESTING ? "/Users/gustavo/Developer/SEMB/8k8bitpcm.wav" : filename;
-//        filename = "/Users/gustavo/Developer/SEMB/JumpMono.wav";
+        filename = TESTING ? DEFAULT_FILE : filename;
         
         wavptr = fopen(filename, "r");
         
@@ -96,14 +101,20 @@ int main(int argc, char** argv) {
             return 403;
         }
         
-//        byte sampley[data.chunkSize/(format.sampleRate/PPS)][2];
-//        sampley[0][0] = 110;
-//        sampley[100][1] = 110;
         
         fillData();
+        fillSamples();
+        
+        timePassed = clock();
+
         createPGM();
         chooseSamples();
         fillPGM();
+        
+        timePassed = clock() - timePassed;
+        
+        printf("Took %lu ticks (%f seconds)\n", timePassed, ((float) timePassed)/ CLOCKS_PER_SEC);
+        
         fclose(pgmptr);
         fclose(wavptr);
     }
@@ -180,6 +191,17 @@ void fillData(){
     data.chunkSize = (unsigned) lil_e_to_big_e_4(buffer);
 }
 
+void fillSamples(){
+    fseek(wavptr, 44, SEEK_SET);
+    int i = 0;
+    byte buffer;
+    while (!feof(wavptr)) {
+        fread(&buffer, sizeof(byte), 1, wavptr);
+        allSamples[i++] = buffer;
+    }
+    allSamplesCount = i;
+}
+
 void createPGM(){
     char *cropped = strrchr(filename, '/');
     char *namext, *namenoxt;
@@ -191,21 +213,20 @@ void createPGM(){
         namenoxt = removeFileExt(namext);
     }
     
-    pgmptr = fopen(strcat(namenoxt, ".pgm"), "w");
-    fprintf(pgmptr, "P2 %d %d 255", LINE_HEIGHT, data.chunkSize/(format.sampleRate/PPS));
+    if(!MEASURING) pgmptr = fopen(strcat(namenoxt, ".pgm"), "w");
+    if(!MEASURING) fprintf(pgmptr, "P2 %d %d 255", LINE_HEIGHT, data.chunkSize/(format.sampleRate/PPS));
 }
 
 void chooseSamples(){
     
-    printf("\nGenerating PGM file...");
-    
-    int i = 0, j = 0, step = format.avgBytesPerSec/PPS;
+    int i = 0, j = 0, step = format.avgBytesPerSec/PPS, index = 0;
     byte buffer, max = 128, min = 127;
     
     while (i < data.chunkSize/step){
         if (format.bitsPerSample == 8) {
             for (j = 0; j < step; j++) {
-                fread(&buffer, sizeof(buffer), 1, wavptr);
+//                fread(&buffer, sizeof(buffer), 1, wavptr);
+                buffer = allSamples[index++];
                 if(buffer > max) max = buffer;
                 if(buffer < min) min = buffer;
             }
@@ -217,7 +238,7 @@ void chooseSamples(){
         i++;
     }
     samplesCount = i;
-    printf("\nPlotted %d samples\n", i);
+    if(!MEASURING) printf("\nPlotted %d samples\n", i);
 }
 
 void fillPGM(){
@@ -243,35 +264,26 @@ void plotValue(short int min, short int max){
     
     //Plot Bottom Paddding
     for (i = 0; i < padBottom; i++) {
-        fprintf(pgmptr, WHITE);
+        if(!MEASURING) fprintf(pgmptr, WHITE);
     }
     
     // Plot bottom value
     for (i = 0; i < down_mod; i++) {
-        fprintf(pgmptr, BLACK);
+        if(!MEASURING) fprintf(pgmptr, BLACK);
     }
     
     //Center point
-    fprintf(pgmptr, BLACK);
+    if(!MEASURING) fprintf(pgmptr, BLACK);
     
     // Plot bottom value
     for (i = 0; i < up_mod; i++){
-        fprintf(pgmptr, BLACK);
+        if(!MEASURING) fprintf(pgmptr, BLACK);
     }
     
     //Plot Top Paddding
     for (i = 0; i < padTop; i++) {
-        fprintf(pgmptr, WHITE);
+        if(!MEASURING) fprintf(pgmptr, WHITE);
     }
-    
-//    printf("Range: %d\n", range);
-//    printf("Values : %4d and %3d\n", min, max);
-//    printf("Abs    : %4d and %3d\n", down, up);
-//    printf("Modules: %4d and %3d\n", down_mod, up_mod);
-//    printf("Padding: %4d and %3d\n", padBottom, padTop);
-//    printf("Total  : %4d\n", padBottom+down_mod+1+up_mod+padTop);
-    
-//    printf("\n");
 }
 
 char* lil_e_to_big_e_2(byte *littleEndian){

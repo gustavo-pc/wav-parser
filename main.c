@@ -32,7 +32,7 @@
 #define PPS                 1200
 
 /// The line height (in pixels) for the PGM file
-#define LINE_HEIGHT         201                         // Must be an odd value, because of the zero-line
+#define LINE_HEIGHT         301                         // Must be an odd value, because of the zero-line
 
 /// Baud Rate for USART
 #define BAUD                500000
@@ -176,20 +176,25 @@ void chooseSamples(){
 /// Starts here
 void main() {
     openSerialComm();
-    prepareMeasurement();
+    //prepareMeasurement();
+    
+    
+    TRISDbits.RD0 = 0x00;
     
     // Started code execution
-    printf("Started Measurement: Height = %d and PPS = %d\n\r", LINE_HEIGHT, PPS);
-    running = 1;
-    TMR0L   = 0;                                                        // Starting TMR0 on 0
+    //printf("Started Measurement: Height = %d and PPS = %d\n\r", LINE_HEIGHT, PPS);
+    //running = 1;
+    LATDbits.LATD0 = 0x01;
+    //TMR0L   = 0;                                                        // Starting TMR0 on 0
 
     //writeHeader();
     chooseSamples();
     
-    // Finished code execution
-    running = 0;   
-    printf("Interrupted %d times in %lu us\n\r", counter, (unsigned long int)counter*(128));
+    /// Finished code execution
+    //running = 0;   
+    LATDbits.LATD0 = 0x00;
+    //printf("Interrupted %d times in %lu us\n\r", counter, (unsigned long int)counter*(128));
     
     // Preventing main() from being called again
-    while(1);
+    //while(1);
 }
